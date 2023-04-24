@@ -7,6 +7,8 @@ const multer = require('multer')
 var path = require('path');
 const BodyParser = require('body-parser')
 const { v4: uuidv4 } = require('uuid');
+const AWS = require("aws-sdk");
+const s3 = new AWS.S3()
 app.use(cors());
 app.use(express.json());
 
