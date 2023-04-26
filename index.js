@@ -24,13 +24,13 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 
 const db = mysql.createConnection(
-    // process.env.DATABASE_URL
-        {
-        host: "localhost",
-        user: "root",
-        password: "",
-        database: "ject_mushroom_1",
-    }
+    process.env.DATABASE_URL
+    //     {
+    //     host: "localhost",
+    //     user: "root",
+    //     password: "",
+    //     database: "ject_mushroom_1",
+    // }
 )
 
 
