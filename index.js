@@ -544,14 +544,6 @@ await s3.send(command)
 app.delete('/deletedata/:id',async (req, res)=>{
         let id = req.params.id;
         let sql = 'Delete from forest Where forest_id = ? ';
-        let find = 'SELECT * FROM forest  WHERE forest_id=i';
-        console.log(find.imageName)
-        const params = {
-            Bucket: bucketname,
-            Key: find.imageName,
-        }
-        const command = new DeleteObjectCommand(params) 
-        await s3.send(command)
         db.query(sql, [id],(err, result)=>{
         if(err){
             console.log(err);
