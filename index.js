@@ -8,7 +8,6 @@ var path = require('path');
 const BodyParser = require('body-parser')
 const { v4: uuidv4 } = require('uuid');
 const { S3Client, PutObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
-// const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const fs = require('fs');
 app.use(cors());
 app.use(express.json());
