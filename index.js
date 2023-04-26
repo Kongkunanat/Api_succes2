@@ -7,53 +7,63 @@ const multer = require('multer')
 var path = require('path');
 const BodyParser = require('body-parser')
 const { v4: uuidv4 } = require('uuid');
-const AWS = require("aws-sdk");
-const s3 = new AWS.S3()
+const { S3Client, PutObjectCommand, DeleteObjectCommand } = require("@aws-sdk/client-s3");
+// const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
+const fs = require('fs');
 app.use(cors());
 app.use(express.json());
 
 
+
+
 app.use(BodyParser.json());
 app.use(BodyParser.urlencoded({ extended: true }))
-//asdasd
+
 
 app.use(express.static(path.join(__dirname, 'public')));
 
 
 const db = mysql.createConnection(
-    process.env.DATABASE_URL
+    // process.env.DATABASE_URL
+        {
+        host: "localhost",
+        user: "root",
+        password: "",
+        database: "ject_mushroom_1",
+    }
 )
 
 
-  app.use(express.json());
-  app.use(cors());
-  
+app.use(express.json());
+app.use(cors());
 
-  
 
-  
-    app.post("/login", (req, res) => {
-        const username = req.body.username;
-        const password = req.body.password;
-    
-        db.query("SELECT * FROM admin WHERE username = ?", [username], (err, result) => {
-          if (err) {
-            res.send(err);
-          }
-          if (result.length > 0) {
-            
-            if(password == result[0].password){
-                res.send(result[0])
-            }
-            else{
-                res.send({ msg: "username or Password incorrect" });
-            }
-            
-          } else {
-            res.send({ msg: "No user account" });
-          }
-        });
-      });
+
+
+
+
+app.post("/login", (req, res) => {
+    const username = req.body.username;
+    const password = req.body.password;
+
+    db.query("SELECT * FROM admin WHERE username = ?", [username], (err, result) => {
+      if (err) {
+        res.send(err);
+      }
+      if (result.length > 0) {
+        
+        if(password == result[0].password){
+            res.send(result[0])
+        }
+        else{
+            res.send({ msg: "username or Password incorrect" });
+        }
+        
+      } else {
+        res.send({ msg: "No user account" });
+      }
+    });
+  });
 
 db.connect(function (err) {
     if (err) {
@@ -63,7 +73,7 @@ db.connect(function (err) {
 })
 
 
- 
+
 
 
 
@@ -177,7 +187,6 @@ app.put('/updatecate',(req, res)=>{
     let id = req.body.id;
     let title = req.body.title;
 
-    console.log(id);
 
 
     let sql = "UPDATE category SET cat_title=?  WHERE cat_id=?"; 
@@ -294,10 +303,22 @@ app.put('/updatehabit',(req, res)=>{
 
 
 
-
-
-
 //FOREST
+
+const bucketname = process.env.BUCKET_NAME;
+const bucket_region = process.env.BUCKET_REGION;
+const accessKeyId1 = process.env.ACCESS_KEY;
+const secretAccessKey1 = process.env.SECRET_ACCESS_KEY;
+
+
+const s3 = new S3Client({
+    credentials: {
+      accessKeyId: accessKeyId1,
+      secretAccessKey: secretAccessKey1,
+    },
+    region: bucket_region
+  });
+
 
 var imgconfig = multer.diskStorage({
     destination: (req, file, callBack) => {
@@ -319,13 +340,14 @@ const isImage = (req,file,callback)=>{
 }
 
 var upload = multer({
-    storage:imgconfig,  fileFilter:isImage, limits: { fileSize: 1024 * 1024 }
+    storage:imgconfig,  fileFilter:isImage
 });
 
 
 
+
 // insert data
-app.post('/insertdata',upload.single('image'),(req, res)=>{
+app.post('/insertdata',upload.single('image'),async (req, res)=>{  
 
     let catid = req.body.catid;
     let title = req.body.title;
@@ -336,8 +358,27 @@ app.post('/insertdata',upload.single('image'),(req, res)=>{
     let habit = req.body.habit;
     let desc = req.body.desc;
     let benefit = req.body.benefit;  
+    
+
+
+const buffer = fs.readFileSync(image.path); // อ่านไฟล์จาก path เป็น Byte
+
+
+const params = {
+    Bucket: bucketname,
+    Key: imageName,
+    Body: buffer,   //ข้อมูลต้องเป็น Byte  
+    ContentType: image.mimetype,
+}
+
+const command = new PutObjectCommand(params)
+ 
+await s3.send(command)
+
+
 
     let sql = 'INSERT INTO forest(cat_id, forest_title, forest_sciname, forest_Common, forest_image, forest_desc, forest_benefit,habit_id) VALUES(?,?,?,?,?,?,?,?)';
+    console.log(catid)
     db.query(sql,[catid,title,sciname,Common,imageName,desc,benefit,habit],(err, result)=>{
         if(err){
             console.log(err);
@@ -351,7 +392,11 @@ app.post('/insertdata',upload.single('image'),(req, res)=>{
 
 
 
-app.get('/getdata',(req, res)=>{
+app.get('/getdata',async(req, res)=>{
+
+
+
+
         db.query(`SELECT forest_id,forest_sciname,forest_Common,forest_title ,habit_id,cat_title ,forest_image ,forest_desc,forest_benefit, forest.cat_id FROM forest, category WHERE  forest.cat_id = category.cat_id`,(err, result)=>{
             if(err){
                 console.log(err);
@@ -366,6 +411,7 @@ app.get('/getdata',(req, res)=>{
 
 //get mushroom
 app.get('/getmushroom',(req, res)=>{
+
     db.query(`SELECT * FROM forest  INNER JOIN habit ON (forest.habit_id=habit.habit_id) WHERE   forest_id = 13`,(err, result)=>{
         if(err){
             console.log(err);
@@ -403,12 +449,13 @@ app.get('/getmushroom3',(req, res)=>{
 
 })
 
-	
+
 
 
 
 
 app.get('/getmushroom_cat3',(req, res)=>{
+
     db.query(`SELECT * FROM forest  INNER JOIN habit ON (forest.habit_id=habit.habit_id) WHERE cat_id = 3`,(err, result)=>{
         if(err){
             console.log(err);
@@ -423,6 +470,7 @@ app.get('/getmushroom_cat3',(req, res)=>{
 
 
 app.get('/getherb',(req, res)=>{
+    
     db.query(`SELECT * FROM forest  INNER JOIN habit ON (forest.habit_id=habit.habit_id) WHERE cat_id = 1`,(err, result)=>{
         if(err){
             console.log(err);
@@ -447,7 +495,7 @@ app.get('/getforest',(req, res)=>{
 
 })
 // update data
-app.put('/updatedata/:id',upload.single('avatar'),(req, res)=>{
+app.put('/updatedata/:id',upload.single('avatar'),async (req, res)=>{
     let id = req.params.id;
     let newcatid = req.body.newcatid;
     let newtitle = req.body.newtitle;
@@ -458,7 +506,21 @@ app.put('/updatedata/:id',upload.single('avatar'),(req, res)=>{
     let newhabit = req.body.newhabit;
     let newdesc = req.body.newdesc;
     let newbenefit = req.body.newbenefit;
-    console.log(id)
+
+
+    const buffer = fs.readFileSync(image.path); // อ่านไฟล์จาก path เป็น Byte
+
+
+const params = {
+    Bucket: bucketname,
+    Key: imageName2,
+    Body: buffer,   //ข้อมูลต้องเป็น Byte  
+    ContentType: image.mimetype,
+}
+
+const command = new PutObjectCommand(params)
+ 
+await s3.send(command)
 
     let sql = `UPDATE forest SET cat_id=?, forest_title=?, forest_sciname=?, forest_Common=?, forest_image=?, forest_desc=?, forest_benefit=?,habit_id=? WHERE forest_id=?`; 
     db.query(sql,[newcatid,newtitle,newsciname,newCommon,imageName2,newdesc,newbenefit,newhabit,id],(err, result)=>{
@@ -479,10 +541,17 @@ app.put('/updatedata/:id',upload.single('avatar'),(req, res)=>{
 
 
 // delete data
-app.delete('/deletedata/:id',(req, res)=>{
+app.delete('/deletedata/:id',async (req, res)=>{
         let id = req.params.id;
         let sql = 'Delete from forest Where forest_id = ? ';
-        console.log(id);
+        let find = 'SELECT * FROM forest  WHERE forest_id=i';
+        console.log(find.imageName)
+        const params = {
+            Bucket: bucketname,
+            Key: find.imageName,
+        }
+        const command = new DeleteObjectCommand(params) 
+        await s3.send(command)
         db.query(sql, [id],(err, result)=>{
         if(err){
             console.log(err);
