@@ -319,14 +319,14 @@ const s3 = new S3Client({
   });
 
 
-var imgconfig = multer.diskStorage({
-    destination: (req, file, callBack) => {
-        callBack(null, './public/images')     // './public/images/' directory name where save the file
-    },
-    filename: (req, file, callBack) => {
-        callBack(null,file.originalname)  
-    }
-})
+// var imgconfig = multer.diskStorage({
+//     destination: (req, file, callBack) => {
+//         callBack(null, './public/images')     // './public/images/' directory name where save the file
+//     },
+//     filename: (req, file, callBack) => {
+//         callBack(null,file.originalname)  
+//     }
+// })
 
 
 // img filter
@@ -339,7 +339,7 @@ const isImage = (req,file,callback)=>{
 }
 
 var upload = multer({
-    storage:imgconfig,  fileFilter:isImage
+     fileFilter:isImage //storage:imgconfig, 
 });
 
 
